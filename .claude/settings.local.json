@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \".claude/agents\" && ls -la \".claude\")",
+      "Bash(python -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/api/health)",
+      "Bash(curl -s http://localhost:8000/api/health)",
+      "Bash(curl -s http://localhost:8000/api/analyze/41457)",
+      "Bash(curl -s http://localhost:8000/api/telemetry/41457)",
+      "Bash(curl -sk \"https://credenciamento.eletrofrio.com.br:5900/galileo/api/api_hackathon?route=telemetria&dispositivoId=41457\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'tipo={type\\(d\\).__name__}, len={len\\(d\\) if hasattr\\(d,\\\\\"__len__\\\\\"\\) else \\\\\"?\\\\\"}'\\); print\\(json.dumps\\(d[:3] if isinstance\\(d,list\\) else d, indent=2, default=str\\)[:500]\\)\")",
+      "Bash(python main.py)",
+      "Bash(ollama --version)",
+      "Bash(python -c \"import fastapi, uvicorn, httpx, pydantic_settings, motor, langchain, faiss, sentence_transformers, loguru; print\\('deps OK'\\)\")",
+      "Bash(timeout 60 python -c \"from src.interfaces.api.app import create_app; app = create_app\\(\\); print\\('APP OK — rotas:', sorted\\({r.path for r in app.routes}\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\vitto\\Área de Trabalho\\Jornada - Eletrofio\\.claude"
+    ]
+  }
+}

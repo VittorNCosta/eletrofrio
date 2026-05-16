@@ -1,0 +1,54 @@
+1. Alarmes (Lista de alarmes dos últimos 30 dias)
+
+Método: GET ou POST
+
+URL: ?route=alarmes
+
+Exemplo: https://credenciamento.eletrofrio.com.br:5900/galileo/api/api_hackathon?route=alarmes
+
+ 
+2. Unidades (Lista de todas as lojas/lojas cadastradas)
+
+Método: GET ou POST
+
+URL: ?route=unidades
+
+Exemplo: https://credenciamento.eletrofrio.com.br:5900/galileo/api/api_hackathon?route=unidades
+ 
+
+3. Telemetria (Dados de temperatura de um dispositivo específico)
+
+Método: GET ou POST
+
+URL: ?route=telemetria&dispositivoId=ID_DO_DISPOSITIVO
+
+Exemplo: https://credenciamento.eletrofrio.com.br:5900/galileo/api/api_hackathon?route=telemetria&dispositivoId=13281
+
+ 
+4. Abrir Chamado (Simulação de abertura de ticket)
+
+Método: POST (Exclusivo)
+
+URL: ?route=abrir-chamado
+
+Payload (Body JSON):
+
+json
+
+{
+
+  "equipe": "Nome da Sua Equipe",
+
+  "lojaId": 315,
+
+  "lojaNome": "Sítio Cercado",
+
+  "dispositivoId": 13281,
+
+  "tag": "2R8 - EXP. DE AÇOUGUE",
+
+  "motivoIA": "Excesso de tempo em degelo",
+
+  "requerTecnico": true
+
+}

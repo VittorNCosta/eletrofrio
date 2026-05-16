@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eletrofrio AI — PoC</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="phone-notch"></div>
+
+        <div class="phone-status-bar">
+            <span class="status-time" id="status-time">9:41</span>
+            <div class="status-icons">
+                <span>●●●●</span>
+                <span>📶</span>
+                <span>🔋</span>
+            </div>
+        </div>
+
+        <!-- Tela 1: lista de devices -->
+        <section id="screen-list" class="screen active">
+            <header class="app-header">
+                <div class="avatar">🤖</div>
+                <div class="header-info">
+                    <h1>Assistente Eletrofrio</h1>
+                    <span class="status-online">● online</span>
+                </div>
+            </header>
+
+            <div class="screen-body">
+                <div class="welcome-bubble">
+                    <p>Olá! 👋 Sou o assistente de monitoramento da Eletrofrio.</p>
+                    <p>Selecione um dispositivo para que eu analise o estado atual:</p>
+                </div>
+
+                <div id="devices-loading" class="loading">Carregando dispositivos...</div>
+                <ul id="devices-list" class="devices-list"></ul>
+            </div>
+        </section>
+
+        <!-- Tela 2: detalhe do device -->
+        <section id="screen-detail" class="screen">
+            <header class="app-header">
+                <button class="back-btn" id="back-btn">‹</button>
+                <div class="header-info">
+                    <h1 id="detail-title">Device —</h1>
+                    <span id="detail-subtitle" class="status-online">analisando…</span>
+                </div>
+            </header>
+
+            <div class="screen-body" id="detail-body">
+                <div id="detail-loading" class="loading">🔍 Analisando dispositivo...</div>
+
+                <div id="detail-content" class="hidden">
+                    <!-- Bubble com diagnóstico -->
+                    <div class="bubble bot">
+                        <div id="severity-badge" class="severity-badge">—</div>
+                        <p id="reason-text">—</p>
+                    </div>
+
+                    <!-- Card: gráfico temperatura -->
+                    <div class="card">
+                        <h3>📊 Temperatura recente</h3>
+                        <canvas id="temp-chart"></canvas>
+                        <div class="metrics">
+                            <div><span class="label">Máx</span><strong id="metric-max">—</strong></div>
+                            <div><span class="label">Méd</span><strong id="metric-avg">—</strong></div>
+                            <div><span class="label">Limite</span><strong id="metric-threshold">10°C</strong></div>
+                        </div>
+                    </div>
+
+                    <!-- Card: alarmes -->
+                    <div class="card">
+                        <h3>🚨 Alarmes recentes</h3>
+                        <ul id="alarms-list" class="alarms-list"></ul>
+                    </div>
+
+                    <!-- Card: recomendação RAG -->
+                    <div class="card rag-card hidden" id="rag-card">
+                        <h3>🧠 Recomendação técnica (RAG)</h3>
+                        <p id="rag-text">—</p>
+                    </div>
+
+                    <!-- Card: chamado -->
+                    <div class="card ticket-card hidden" id="ticket-card">
+                        <h3>🎫 Chamado aberto</h3>
+                        <pre id="ticket-text">—</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
