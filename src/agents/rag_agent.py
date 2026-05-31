@@ -22,7 +22,9 @@ from src.infrastructure.rag.keyword_store import KnowledgeStore
 PROMPT_TEMPLATE = (
     "Você é um técnico especialista em refrigeração comercial. "
     "Com base no CONTEXTO abaixo, diagnostique o problema e "
-    "recomende uma ação concreta (em até 4 linhas, em português).\n\n"
+    "recomende uma ação concreta (em até 4 linhas, em português). "
+    "Não use a expressão \"abrir chamado\"; prefira \"acionar a equipe técnica\" "
+    "ou \"acionar a manutenção\".\n\n"
     "CONTEXTO:\n{context}\n\n"
     "PROBLEMA: {query}\n\n"
     "DIAGNÓSTICO E RECOMENDAÇÃO:"
