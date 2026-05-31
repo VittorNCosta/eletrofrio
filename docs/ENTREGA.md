@@ -34,23 +34,25 @@ convertido em **ação priorizada** — a manutenção tende a ser reativa.
 Desenvolver uma solução que consuma dados reais de telemetria e alarmes da
 API Eletrofrio, organize essas informações, **classifique a severidade** de
 cada dispositivo de forma determinística e, quando necessário, **recomende
-ação técnica** e **abra chamado de manutenção automaticamente**, oferecendo
-uma interface de visualização para o time de operação.
+ação técnica** e **alerte o cliente automaticamente via WhatsApp** (com o link
+do gráfico do dispositivo), oferecendo uma interface de visualização para o
+time de operação.
 
 ## 3. Objetivos específicos
 
 1. Consumir e integrar os endpoints da API Eletrofrio (`telemetria`,
-   `alarmes`, `unidades`, `abrir-chamado`).
+   `alarmes`, `unidades`).
 2. Tratar e organizar os dados brutos (estatísticas de temperatura,
    contagem e padrões de alarmes, enriquecimento com loja/dispositivo).
 3. Implementar classificação determinística de severidade
    (`ok` / `warning` / `critical`) com regras de negócio explícitas.
 4. Estruturar uma base de conhecimento técnico e recuperar trechos
-   relevantes via RAG (TF-IDF + similaridade de cosseno).
-5. Automatizar a abertura de chamado para casos críticos.
-6. Persistir o histórico (telemetria, alarmes, decisões, chamados) para
+   relevantes via RAG (TF-IDF + similaridade de cosseno) com geração por LLM (Groq).
+5. Automatizar o alerta ao cliente via WhatsApp (telefone obtido em `unidades`)
+   nos casos de `warning` e `critical`, incluindo o link do gráfico.
+6. Persistir o histórico (telemetria, alarmes, decisões, notificações) para
    rastreabilidade.
-7. Entregar uma interface funcional (mockup mobile) com visualização
+7. Entregar uma interface funcional (mockup mobile responsivo) com visualização
    (gráfico de temperatura, indicadores e badge de severidade).
 
 ## 4. Justificativa
@@ -66,7 +68,7 @@ Falhas de refrigeração têm impacto direto e mensurável:
 
 Os dados necessários para antecipar esses problemas **já existem** (telemetria
 e alarmes), mas não são transformados em triagem priorizada. Uma camada
-automatizada de classificação + recomendação + abertura de chamado reduz
+automatizada de classificação + recomendação + alerta ao cliente reduz
 perdas e acelera a resposta, atuando como um **assistente de triagem** para
 a equipe técnica.
 
@@ -76,17 +78,17 @@ Redes de supermercados e centros de distribuição com frotas de equipamentos
 de frio distribuídas em múltiplas lojas. O público-alvo é o **time de
 operação/manutenção**, sobrecarregado pelo volume de alarmes. A solução se
 posiciona como assistente que diz **onde olhar primeiro** e **o que
-provavelmente fazer**, abrindo chamado sozinho nos casos críticos.
+provavelmente fazer**, alertando o cliente via WhatsApp nos casos relevantes.
 
 ## 6. Coerência: problema → solução
 
 | Problema | Objetivo | Dados usados | Funcionalidade implementada |
 |---|---|---|---|
 | Volume de alarmes sem priorização | Classificar severidade | `alarmes`, `telemetria` | Orchestrator com regras determinísticas (`ok`/`warning`/`critical`) |
-| Não saber a causa provável | Recomendar ação | Base de conhecimento + contexto do device | RAG Agent (TF-IDF) retorna diagnóstico técnico |
-| Demora para acionar técnico | Automatizar acionamento | severidade + dados do device/loja | Ticket Agent abre chamado via `POST /abrir-chamado` |
-| Falta de rastreabilidade | Persistir histórico | telemetria/alarmes/decisões | MongoDB (`agent_decisions`, `tickets`, etc.) |
-| Operação sem visão rápida | Interface funcional | resultado consolidado | Mockup mobile: lista com cores de severidade, gráfico, alarmes |
+| Não saber a causa provável | Recomendar ação | Base de conhecimento + contexto do device | RAG Agent (TF-IDF + LLM Groq) retorna diagnóstico técnico |
+| Demora para avisar o cliente | Automatizar alerta | severidade + telefone da loja (`unidades`) | Notification Agent envia WhatsApp (CallMeBot) com link do gráfico |
+| Falta de rastreabilidade | Persistir histórico | telemetria/alarmes/decisões | MongoDB (`agent_decisions`, `notifications`, etc.) |
+| Operação sem visão rápida | Interface funcional | resultado consolidado | Mockup mobile responsivo: lista com cores de severidade, gráfico, alarmes |
 
 ## 7. Atendimento aos requisitos mínimos da PoC
 
@@ -94,11 +96,11 @@ Conforme `docs/POC.md`, seção "A entrega mínima da PoC deverá conter":
 
 | # | Requisito | Como foi atendido |
 |---|---|---|
-| 1 | Consumo funcional de ≥1 endpoint | Consome 4 endpoints da API Eletrofrio (validado ao vivo na URL hospedada) |
+| 1 | Consumo funcional de ≥1 endpoint | Consome 3 endpoints da API Eletrofrio (`telemetria`, `alarmes`, `unidades`) validados ao vivo |
 | 2 | Organização/tratamento dos dados | Estatísticas de temperatura, padrões de alarme, enriquecimento loja/dispositivo |
-| 3 | Interface funcional | Mockup mobile servido em `/` |
-| 4 | Visualização/painel/indicador | Gráfico de temperatura (Chart.js), métricas máx/méd/limite, badge de severidade |
-| 5 | Análise/funcionalidade da proposta | Pipeline Orchestrator → classificação → RAG → abertura de chamado |
+| 3 | Interface funcional | Mockup mobile responsivo servido em `/` + gráfico full-screen em `/chart.html` |
+| 4 | Visualização/painel/indicador | Gráfico de temperatura (Chart.js), métricas máx/méd/mín, badge de severidade |
+| 5 | Análise/funcionalidade da proposta | Pipeline Orchestrator → classificação → RAG (Groq) → alerta WhatsApp com link do gráfico |
 
 ## 8. Arquitetura e stack (resumo)
 
@@ -106,9 +108,12 @@ Conforme `docs/POC.md`, seção "A entrega mínima da PoC deverá conter":
 - **Persistência:** MongoDB Atlas (gravação *best-effort* — indisponibilidade
   do banco não derruba a aplicação)
 - **RAG:** recuperação por TF-IDF + cosseno (stdlib pura, sem dependência
-  pesada); geração por LLM **opcional** (Ollama/OpenAI), com *fallback*
+  pesada); geração por LLM via **Groq** (grátis na nuvem), com *fallback*
   extractivo quando não há LLM configurado
-- **Frontend:** mockup mobile estático (HTML/CSS/JS + Chart.js)
+- **Alertas:** WhatsApp via **CallMeBot** (grátis); telefone obtido em
+  `unidades`, dispara em `warning`/`critical`, com link do gráfico
+- **Frontend:** mockup mobile responsivo (HTML/CSS/JS + Chart.js) + página de
+  gráfico full-screen
 - **Hospedagem:** Render (Web Service)
 
 > Detalhes de fluxo, endpoints e instruções de execução estão no `README.md`
@@ -116,11 +121,14 @@ Conforme `docs/POC.md`, seção "A entrega mínima da PoC deverá conter":
 
 ## 9. Limitações conhecidas (honestidade técnica)
 
-- No ambiente hospedado o RAG opera em **modo extractivo** (retorna os
-  trechos relevantes da base, sem geração por LLM) — suficiente para
-  demonstrar viabilidade; geração por LLM é plugável via `LLM_PROVIDER`.
+- A geração por LLM usa o **Groq** (grátis); sem chave configurada, o RAG cai
+  automaticamente para **modo extractivo** (trechos da base, sem geração).
+- O **CallMeBot** (WhatsApp grátis) só entrega a números que ativaram o bot;
+  na demo, os alertas são redirecionados a um número de teste (`WHATSAPP_OVERRIDE_PHONE`),
+  mantendo a mensagem com os dados reais da loja. Em produção, usaria um provedor
+  oficial (Twilio/Meta Cloud API) sem mudar o domínio.
 - A base de conhecimento é um conjunto inicial de diagnósticos; em produção
-  seria alimentada com manuais e histórico real de chamados.
+  seria alimentada com manuais e histórico real.
 - O plano gratuito de hospedagem hiberna após inatividade (primeira
   requisição pode levar ~50s).
 
@@ -135,7 +143,11 @@ Conforme `docs/POC.md`, seção "A entrega mínima da PoC deverá conter":
 
 ### Como testar rapidamente
 
-1. Acesse https://eletrofrio.onrender.com (aguarde ~50s se estiver hibernado).
+1. Acesse https://eletrofrio.onrender.com (aguarde ~50s se estiver hibernado),
+   de preferência **pelo celular**.
 2. A lista de dispositivos carrega a partir dos alarmes reais da API.
 3. Clique em um dispositivo: a aplicação dispara a análise e exibe
-   severidade, gráfico de temperatura, alarmes e recomendação técnica.
+   severidade, gráfico de temperatura, alarmes e recomendação técnica (Groq).
+4. Em `warning`/`critical`, um **alerta de WhatsApp** é enviado ao telefone da
+   loja com o **link do gráfico** — toque no link para abrir o gráfico full-screen
+   no próprio celular.
