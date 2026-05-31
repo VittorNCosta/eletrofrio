@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eletrofrio — Gráfico de Temperatura</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root { --bg:#0f172a; --card:#1e293b; --txt:#e2e8f0; --muted:#94a3b8; --accent:#0ea5e9; --danger:#ef4444; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            background: var(--bg); color: var(--txt); padding: 16px;
+        }
+        .wrap { max-width: 1100px; margin: 0 auto; }
+        header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        h1 { font-size: 1.25rem; margin: 0; }
+        .sub { color: var(--muted); font-size: .9rem; }
+        .chart-card { background: var(--card); border-radius: 14px; padding: 16px; }
+        .chart-box { position: relative; width: 100%; height: 60vh; min-height: 320px; }
+        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+        .metric { background: var(--card); border-radius: 12px; padding: 14px; text-align: center; }
+        .metric .label { display: block; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+        .metric strong { font-size: 1.4rem; }
+        .metric.danger strong { color: var(--danger); }
+        .state { color: var(--muted); padding: 40px 0; text-align: center; }
+        a.back { color: var(--accent); text-decoration: none; font-size: .9rem; }
+        @media (max-width: 560px) { .metrics { grid-template-columns: repeat(2, 1fr); } .chart-box { height: 50vh; } }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <div>
+                <h1 id="title">Temperatura — Device —</h1>
+                <span class="sub" id="subtitle">carregando…</span>
+            </div>
+            <a class="back" href="#" onclick="window.close();return false;">‹ Fechar</a>
+        </header>
+
+        <div class="chart-card">
+            <div class="chart-box"><canvas id="chart"></canvas></div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric"><span class="label">Máx</span><strong id="m-max">—</strong></div>
+            <div class="metric"><span class="label">Méd</span><strong id="m-avg">—</strong></div>
+            <div class="metric"><span class="label">Mín</span><strong id="m-min">—</strong></div>
+            <div class="metric"><span class="label">Limite</span><strong id="m-threshold">—</strong></div>
+        </div>
+
+        <div class="state" id="state"></div>
+    </div>
+
+    <script>
+        const THRESHOLD = 10;
+        const params = new URLSearchParams(location.search);
+        const deviceId = params.get("device");
+        const loja = params.get("loja");
+
+        const $ = (id) => document.getElementById(id);
+        $("title").textContent = `Temperatura — Device ${deviceId || "—"}`;
+        $("m-threshold").textContent = `${THRESHOLD}°C`;
+
+        function extractTempDataset(telemetry) {
+            if (telemetry && Array.isArray(telemetry.datasets)) {
+                return telemetry.datasets.find(d => {
+                    const lbl = (d.label || "").toLowerCase();
+                    return lbl.includes("temperatura") && !lbl.includes("setpoint");
+                });
+            }
+            return null;
+        }
+
+        async function load() {
+            if (!deviceId) { $("state").textContent = "device não informado na URL."; return; }
+            try {
+                const resp = await fetch(`/api/telemetry/${deviceId}`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const telemetry = await resp.json();
+                render(telemetry);
+            } catch (e) {
+                $("state").textContent = `Erro ao carregar telemetria: ${e.message}`;
+                $("subtitle").textContent = "falha";
+            }
+        }
+
+        function render(telemetry) {
+            const labels = telemetry.labels || [];
+            const apiDatasets = telemetry.datasets || [];
+            $("subtitle").textContent = loja ? decodeURIComponent(loja) : `${labels.length} amostras`;
+
+            // Métricas a partir da série de temperatura
+            const tempDs = extractTempDataset(telemetry);
+            const temps = tempDs ? tempDs.values.filter(v => typeof v === "number") : [];
+            if (temps.length) {
+                $("m-max").textContent = `${Math.max(...temps).toFixed(1)}°C`;
+                $("m-min").textContent = `${Math.min(...temps).toFixed(1)}°C`;
+                $("m-avg").textContent = `${(temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1)}°C`;
+                const maxMetric = $("m-max").parentElement;
+                if (Math.max(...temps) > THRESHOLD) maxMetric.classList.add("danger");
+            }
+
+            const datasets = apiDatasets.map(ds => {
+                const isTemp = (ds.label || "").toLowerCase().includes("temperatura")
+                    && !(ds.label || "").toLowerCase().includes("setpoint");
+                return {
+                    label: ds.label,
+                    data: ds.values,
+                    borderColor: ds.color || "#0ea5e9",
+                    backgroundColor: (ds.color || "#0ea5e9") + "22",
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2,
+                    // Pinta de vermelho os trechos acima do limite (só na temperatura)
+                    segment: isTemp ? {
+                        borderColor: ctx => (ctx.p0.parsed.y > THRESHOLD || ctx.p1.parsed.y > THRESHOLD)
+                            ? "#ef4444" : (ds.color || "#0ea5e9"),
+                    } : undefined,
+                };
+            });
+
+            if (labels.length) {
+                datasets.push({
+                    label: `Limite (${THRESHOLD}°C)`,
+                    data: labels.map(() => THRESHOLD),
+                    borderColor: "#ef4444",
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    fill: false,
+                    borderWidth: 1.5,
+                });
+            }
+
+            new Chart($("chart"), {
+                type: "line",
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: "index", intersect: false },
+                    plugins: {
+                        legend: { labels: { color: "#e2e8f0", boxWidth: 12, padding: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => `${c.dataset.label}: ${typeof c.parsed.y === "number" ? c.parsed.y.toFixed(1) : c.parsed.y}°C`,
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { ticks: { color: "#94a3b8" }, grid: { color: "#33415555" } },
+                        x: { ticks: { color: "#94a3b8", maxTicksLimit: 12 }, grid: { color: "#33415533" } }
+                    }
+                }
+            });
+        }
+
+        load();
+    </script>
+</body>
+</html>

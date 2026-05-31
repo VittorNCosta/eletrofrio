@@ -1,0 +1,38 @@
+# Render Blueprint — Eletrofrio AI Backend
+# Deploy: Web Service Python (plano free). A porta é lida de $PORT (injetada
+# pelo Render) em main.py. Segredos ficam no painel (sync: false), fora do git.
+services:
+  - type: web
+    name: eletrofrio
+    runtime: python
+    plan: free
+    branch: develop
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      # LLM (Groq grátis)
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GROQ_API_KEY
+        sync: false
+      # WhatsApp (CallMeBot)
+      - key: WHATSAPP_ENABLED
+        value: "true"
+      - key: WHATSAPP_PROVIDER
+        value: callmebot
+      - key: WHATSAPP_COUNTRY_CODE
+        value: "55"
+      - key: CALLMEBOT_APIKEY
+        sync: false
+      - key: WHATSAPP_OVERRIDE_PHONE
+        sync: false
+      # URL pública (vazio aqui = usa RENDER_EXTERNAL_URL automaticamente)
+      - key: PUBLIC_BASE_URL
+        sync: false
+      # Persistência
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: eletrofrio

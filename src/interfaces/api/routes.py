@@ -85,6 +85,14 @@ async def telemetry(device_id: int, api: EletrofrioClient = Depends(get_api_clie
     return await api.fetch_telemetry(device_id)
 
 
+@router.get("/notifications")
+async def list_notifications(
+    limit: int = 50, mongo: MongoRepository = Depends(get_mongo)
+):
+    """Feed das notificações WhatsApp recentes (debug / UI)."""
+    return await mongo.recent_notifications(limit)
+
+
 @router.post("/rag/query")
 async def rag_query(payload: dict, rag: RagAgent = Depends(get_rag_agent)):
     q = payload.get("query", "")

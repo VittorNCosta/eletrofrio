@@ -8,7 +8,7 @@ Coleções:
 - telemetry_history
 - alarm_history
 - agent_decisions
-- tickets
+- notifications
 """
 from datetime import datetime
 from typing import Any
@@ -44,9 +44,18 @@ class MongoRepository:
     async def save_decision(self, decision: dict[str, Any]) -> None:
         await self._safe_insert("agent_decisions", decision)
 
-    async def save_ticket(self, ticket: dict[str, Any]) -> None:
-        ticket = {**ticket, "created_at": datetime.utcnow()}
-        await self._safe_insert("tickets", ticket)
+    async def save_notification(self, notification: dict[str, Any]) -> None:
+        notification = {**notification, "created_at": datetime.utcnow()}
+        await self._safe_insert("notifications", notification)
+
+    async def recent_notifications(self, limit: int = 50) -> list[dict[str, Any]]:
+        """Notificações mais recentes (feed de debug/UI). Best-effort."""
+        try:
+            cursor = self.db.notifications.find().sort("created_at", -1).limit(limit)
+            return [{**doc, "_id": str(doc.get("_id"))} async for doc in cursor]
+        except Exception as e:
+            logger.warning(f"[Mongo] recent_notifications indisponível — seguindo sem: {e}")
+            return []
 
     async def recent_decisions(self, limit: int = 500) -> list[dict[str, Any]]:
         """Decisões mais recentes (usado para enriquecer a tela inicial).

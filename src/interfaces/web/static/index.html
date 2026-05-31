@@ -68,8 +68,10 @@
                         <div class="metrics">
                             <div><span class="label">Máx</span><strong id="metric-max">—</strong></div>
                             <div><span class="label">Méd</span><strong id="metric-avg">—</strong></div>
+                            <div><span class="label">Mín</span><strong id="metric-min">—</strong></div>
                             <div><span class="label">Limite</span><strong id="metric-threshold">10°C</strong></div>
                         </div>
+                        <a id="chart-fullscreen" class="chart-link hidden" target="_blank" rel="noopener">📈 Ver gráfico em tela cheia</a>
                     </div>
 
                     <!-- Card: alarmes -->
@@ -84,10 +86,10 @@
                         <p id="rag-text">—</p>
                     </div>
 
-                    <!-- Card: chamado -->
-                    <div class="card ticket-card hidden" id="ticket-card">
-                        <h3>🎫 Chamado aberto</h3>
-                        <pre id="ticket-text">—</pre>
+                    <!-- Card: alerta WhatsApp -->
+                    <div class="card notif-card hidden" id="notif-card">
+                        <h3>📲 Alerta enviado ao cliente</h3>
+                        <p id="notif-text">—</p>
                     </div>
                 </div>
             </div>

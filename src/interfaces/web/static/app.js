@@ -60,7 +60,7 @@ async function analyzeDevice(device) {
     $("detail-loading").textContent = "🔍 Analisando dispositivo...";
     $("detail-content").classList.add("hidden");
     $("rag-card").classList.add("hidden");
-    $("ticket-card").classList.add("hidden");
+    $("notif-card").classList.add("hidden");
 
     try {
         // Dispara análise + busca telemetria em paralelo
@@ -105,8 +105,16 @@ function renderDecision(decision, telemetry, device) {
     const temps = extractTemps(telemetry);
     const max = temps.length ? Math.max(...temps).toFixed(1) : "—";
     const avg = temps.length ? (temps.reduce((a,b)=>a+b,0) / temps.length).toFixed(1) : "—";
+    const min = temps.length ? Math.min(...temps).toFixed(1) : "—";
     $("metric-max").textContent = max === "—" ? "—" : `${max}°C`;
     $("metric-avg").textContent = avg === "—" ? "—" : `${avg}°C`;
+    $("metric-min").textContent = min === "—" ? "—" : `${min}°C`;
+
+    // Link para o gráfico em tela cheia (página dedicada, melhor no mobile)
+    const fs = $("chart-fullscreen");
+    const loja = encodeURIComponent(device.loja_nome || "");
+    fs.href = `chart.html?device=${device.device_id}&loja=${loja}`;
+    fs.classList.remove("hidden");
 
     // Chart é opcional — se Chart.js falhou ao carregar, segue o jogo
     try {
@@ -122,10 +130,18 @@ function renderDecision(decision, telemetry, device) {
         $("rag-text").textContent = decision.rag_recommendation;
     }
 
-    // Ticket
-    if (decision.ticket_opened && decision.ticket_response) {
-        $("ticket-card").classList.remove("hidden");
-        $("ticket-text").textContent = JSON.stringify(decision.ticket_response, null, 2);
+    // Alerta WhatsApp ao cliente
+    const notif = decision.notification_response;
+    if (notif) {
+        $("notif-card").classList.remove("hidden");
+        const phone = notif.phone ? ` para ${notif.phone}` : "";
+        if (decision.notification_sent) {
+            $("notif-text").textContent = `✅ Alerta enviado${phone}.`;
+        } else if (notif.reason === "no_phone") {
+            $("notif-text").textContent = "ℹ️ Loja sem telefone cadastrado — alerta não enviado.";
+        } else {
+            $("notif-text").textContent = `⚠️ Falha ao enviar alerta${phone}.`;
+        }
     }
 }
 

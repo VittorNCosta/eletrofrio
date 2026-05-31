@@ -8,6 +8,7 @@ Fluxo:
    da KB concatenados (modo "extractive").
 
 Provedores suportados (escolhidos via settings.llm_provider):
+- "groq"   → API da Groq (grátis na nuvem, compatível com OpenAI)
 - "ollama" → LLM local via Ollama (sem custo, sem internet)
 - "openai" → API da OpenAI (gpt-4o-mini por padrão)
 - ""       → modo extractive (sem IA generativa)
@@ -37,6 +38,21 @@ class RagAgent:
 
     def _init_llm(self) -> None:
         provider = (settings.llm_provider or "").lower().strip()
+
+        if provider == "groq" and settings.groq_api_key:
+            try:
+                from langchain_openai import ChatOpenAI
+                self._llm = ChatOpenAI(
+                    model=settings.groq_model,
+                    api_key=settings.groq_api_key,
+                    base_url="https://api.groq.com/openai/v1",
+                    temperature=0.2,
+                )
+                self._provider_name = f"groq:{settings.groq_model}"
+                logger.info(f"[RAG] LLM ativo: {self._provider_name}")
+                return
+            except Exception as e:
+                logger.warning(f"[RAG] Groq indisponível ({e}). Fallback extractive.")
 
         if provider == "ollama":
             try:

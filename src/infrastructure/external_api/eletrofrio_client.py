@@ -46,11 +46,3 @@ class EletrofrioClient:
             return data
         # Fallback: API um dia retornou lista — embrulha no formato novo
         return {"labels": [], "datasets": [], "_legacy": data}
-
-    async def open_ticket(self, payload: dict[str, Any]) -> dict[str, Any]:
-        logger.info(f"POST abrir-chamado payload={payload}")
-        r = await self._client.post(
-            self.base_url, params={"route": "abrir-chamado"}, json=payload
-        )
-        r.raise_for_status()
-        return r.json()

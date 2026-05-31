@@ -5,11 +5,11 @@ delegar cada subtarefa ao agente adequado. NÃO executa parsing, não monta
 payloads, não fala com APIs externas — apenas decide quem faz o quê.
 
 Pipeline determinístico (regras antes de qualquer LLM):
-- TelemetryAgent  → estatísticas de temperatura
-- AlarmAgent      → contagem/padrões de alarmes
-- _classify       → severity ∈ {ok, warning, critical}
-- RagAgent        → recomendação técnica (warning/critical)
-- TicketAgent     → abertura de chamado (critical)
+- TelemetryAgent     → estatísticas de temperatura
+- AlarmAgent         → contagem/padrões de alarmes
+- _classify          → severity ∈ {ok, warning, critical}
+- RagAgent           → recomendação técnica (warning/critical)
+- NotificationAgent  → alerta WhatsApp ao cliente (warning/critical)
 """
 from typing import Any
 
@@ -18,9 +18,9 @@ from loguru import logger
 from src.config import settings
 from src.domain.entities import AgentDecision
 from src.agents.alarm_agent import AlarmAgent
+from src.agents.notification_agent import NotificationAgent
 from src.agents.rag_agent import RagAgent
 from src.agents.telemetry_agent import TelemetryAgent
-from src.agents.ticket_agent import TicketAgent
 
 
 class OrchestratorAgent:
@@ -29,12 +29,12 @@ class OrchestratorAgent:
         telemetry_agent: TelemetryAgent,
         alarm_agent: AlarmAgent,
         rag_agent: RagAgent,
-        ticket_agent: TicketAgent,
+        notification_agent: NotificationAgent,
     ):
         self.telemetry = telemetry_agent
         self.alarms = alarm_agent
         self.rag = rag_agent
-        self.tickets = ticket_agent
+        self.notifications = notification_agent
 
     # --- Classificação (única regra de negócio que fica aqui) -----------
 
@@ -66,6 +66,7 @@ class OrchestratorAgent:
         telemetry: Any,
         alarms: list[dict[str, Any]],
         unit_info: dict[str, Any] | None = None,
+        phone: str | None = None,
     ) -> AgentDecision:
         # 1) Delega análise de dados aos agentes especializados
         tel_stats = self.telemetry.analyze(telemetry)
@@ -83,10 +84,10 @@ class OrchestratorAgent:
         )
 
         if severity == "ok":
-            logger.info("[Orchestrator] Resposta direta — sem RAG, sem chamado")
+            logger.info("[Orchestrator] Resposta direta — sem RAG, sem alerta")
             return decision
 
-        # 3) Delega busca de conhecimento ao RAG
+        # 3) Delega busca de conhecimento ao RAG (warning + critical)
         logger.info("[Orchestrator] Delegando ao RAG Agent")
         query = (
             f"Dispositivo {device_id} — {reason}. "
@@ -97,21 +98,23 @@ class OrchestratorAgent:
         decision.rag_recommendation = rag_text
         decision.action = "rag_lookup"
 
-        if severity != "critical":
-            return decision
-
-        # 4) Delega abertura de chamado ao TicketAgent
-        logger.warning("[Orchestrator] Delegando ao Ticket Agent — anomalia crítica")
-        success, resp = await self.tickets.open(
-            device_id=device_id,
-            alarm_stats=alm_stats,
-            reason=reason,
-            rag_text=rag_text,
-            unit_info=unit_info,
-        )
-        decision.ticket_opened = success
-        decision.ticket_response = resp
-        if success:
-            decision.action = "open_ticket"
+        # 4) Notifica o cliente via WhatsApp (warning + critical)
+        if settings.whatsapp_enabled:
+            logger.info("[Orchestrator] Delegando ao Notification Agent")
+            loja_nome = (unit_info or {}).get("lojaNome") or (unit_info or {}).get("loja_nome")
+            sent, notif_resp = await self.notifications.notify(
+                phone,
+                {
+                    "device_id": device_id,
+                    "loja_nome": loja_nome,
+                    "severity": severity,
+                    "reason": reason,
+                    "rag_text": rag_text,
+                },
+            )
+            decision.notification_sent = sent
+            decision.notification_response = notif_resp
+        else:
+            logger.info("[Orchestrator] WhatsApp desabilitado (whatsapp_enabled=false)")
 
         return decision

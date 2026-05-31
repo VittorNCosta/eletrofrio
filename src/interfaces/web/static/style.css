@@ -182,6 +182,21 @@ body {
 .metrics .label { display: block; font-size: 10px; color: #888; text-transform: uppercase; }
 .metrics strong { font-size: 16px; color: #111; }
 
+.chart-link {
+    display: block;
+    margin-top: 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0ea5e9;
+    text-decoration: none;
+    padding: 8px;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    background: #f0f9ff;
+}
+.chart-link:active { background: #e0f2fe; }
+
 .alarms-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .alarms-list li {
     font-size: 12px;
@@ -200,12 +215,8 @@ body {
 .rag-card { background: #eff6ff; border-left: 4px solid #3b82f6; }
 .rag-card p { font-size: 13px; line-height: 1.5; color: #1e40af; white-space: pre-wrap; }
 
-.ticket-card { background: #fef2f2; border-left: 4px solid #ef4444; }
-.ticket-card pre {
-    font-size: 11px; color: #7f1d1d;
-    background: #fff; padding: 8px; border-radius: 4px;
-    overflow-x: auto; white-space: pre-wrap; word-break: break-word;
-}
+.notif-card { background: #f0fdf4; border-left: 4px solid #22c55e; }
+.notif-card p { font-size: 13px; line-height: 1.5; color: #166534; }
 
 /* ===== Utility ===== */
 .loading {
@@ -215,3 +226,17 @@ body {
     font-size: 13px;
 }
 .hidden { display: none !important; }
+
+/* ===== Mobile real: frame ocupa a tela inteira ===== */
+@media (max-width: 480px) {
+    body { padding: 0; align-items: stretch; }
+    .phone-frame {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh; /* respeita a barra do navegador mobile */
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .phone-notch { display: none; }
+    .screen-body { -webkit-overflow-scrolling: touch; }
+}
